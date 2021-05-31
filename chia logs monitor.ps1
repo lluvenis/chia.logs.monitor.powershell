@@ -1,5 +1,5 @@
 # SETTING
-$LINE_TOKEN = "FLh4IQEgqtQAQdT2IGU5BRPp7T6GkuDVJPAwy0Cmljc"  # LINE Notify Token
+$LINE_TOKEN = "LINETOKEN"  # Input your LINE Notify Token
 $MESSAGE_WON = "RICHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH&stickerPackageId=6370&stickerId=11088036"
 
 Get-Content "~\.chia\mainnet\log\debug.log" -Wait -Tail 10 | select-string 'plots were eligible|error|warning|finished.signage.point|updated.wallet.peak|new_signage_point_harvester' | ForEach {

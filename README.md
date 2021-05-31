@@ -1,6 +1,14 @@
 # chia.logs.monitor.powershell
 Simple powershell script to monitor and analyse Chia logs.
 
+### Setting 
+```
+# SETTING
+$LINE_TOKEN = "LINETOKEN"  # Input your LINE Notify Token
+$MESSAGE_WON = "RICHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH&stickerPackageId=6370&stickerId=11088036"
+
+```
+
 # How t get your Line token
 You can generate your own personal tokens by navigating to  https://notify-bot.line.me/en/ (LINE account required).
 

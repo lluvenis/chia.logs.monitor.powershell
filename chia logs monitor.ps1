@@ -19,7 +19,7 @@ $PassedFilterPercent
 $CurrentTime = Get-Date
 $Later = $CurrentTime.AddSeconds($DELAY_SEND_SUMMARY)
 $host.UI.RawUI.BackgroundColor = "black"
-$host.UI.RawUI.BackgroundColor.Clear()
+
 function SendMessageLine {
     param (
         [string]$message = "",[string]$tokens = "LINETOKEN"

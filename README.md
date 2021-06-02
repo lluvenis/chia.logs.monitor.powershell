@@ -6,6 +6,7 @@ Simple powershell script to monitor and analyse Chia logs.
 # SETTING
 $LINE_TOKEN = "LINETOKEN"  # Input your LINE Notify Token
 $MESSAGE_WON = "RICHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH&stickerPackageId=6370&stickerId=11088036"
+$DELAY_SEND_SUMMARY = 600 # Second
 
 ```
 

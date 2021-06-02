@@ -1,7 +1,7 @@
 # LINE notification settings.
-$LINE_TOKEN = "LINETOKEN"  # Input your LINE Notify Token.
+$LINE_TOKEN = "a7gUVQCtJa7VuK9mqTIr6xAt0qrkjRosGReM0zOXEOt"  # Input your LINE Notify Token.
 $MESSAGE_WON = "RICHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH&stickerPackageId=6370&stickerId=11088036"
-$DELAY_SEND_SUMMARY = 600 # Second
+$DELAY_SEND_SUMMARY = 300 # Second
 
 # No changes required.
 $FastestTime = 1000
@@ -61,7 +61,8 @@ Get-Content "~\.chia\mainnet\log\debug.log" -Wait -Tail 10 | select-string 'plot
         $host.UI.RawUI.WindowTitle = $summary
         if($Later -lt (Get-Date)){
             SendMessageLine $summary $LINE_TOKEN;
-            $Later.AddSeconds($DELAY_SEND_SUMMARY)
+            $Later = Get-Date
+            $Later = $Later.AddSeconds($DELAY_SEND_SUMMARY)
         }
     };
 
@@ -71,7 +72,7 @@ Get-Content "~\.chia\mainnet\log\debug.log" -Wait -Tail 10 | select-string 'plot
         elseif ($_ -Match "([1-9][0-9]*)\splots\swere\seligible") { 'cyan' } 
         elseif ($_ -Match "Time:\s[5-9][0-9]*\.\d+") { 'red' } 
         elseif ($_ -Match "\d+\splots\swere\seligible") { 'white' } 
-        elseif ($_ -Match "error") { 'red' } 
+        elseif ($_ -Match ":\sError\s*(.*)") { 'red' ;SendMessageLine $Matches[1]  $LINE_TOKEN; } 
         elseif ($_ -Match "warning") { 'yellow' } 
         else {
             'DarkGray' 

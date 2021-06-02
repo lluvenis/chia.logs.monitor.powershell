@@ -1,7 +1,7 @@
 # LINE notification settings.
 $LINE_TOKEN = "LINETOKEN"  # Input your LINE Notify Token.
 $MESSAGE_WON = "RICHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH&stickerPackageId=6370&stickerId=11088036"
-$DELAY_SEND_SUMMARY = 10 # Second
+$DELAY_SEND_SUMMARY = 600 # Second
 
 # No changes required.
 $FastestTime = 1000
@@ -18,7 +18,8 @@ $PassedFilterPercent
 
 $CurrentTime = Get-Date
 $Later = $CurrentTime.AddSeconds($DELAY_SEND_SUMMARY)
-
+$host.UI.RawUI.BackgroundColor = "black"
+$host.UI.RawUI.BackgroundColor.Clear()
 function SendMessageLine {
     param (
         [string]$message = "",[string]$tokens = "LINETOKEN"
@@ -37,26 +38,26 @@ Get-Content "~\.chia\mainnet\log\debug.log" -Wait -Tail 10 | select-string 'plot
     
     if ($_ -Match "INFO\s*([0-9]*)\splots\swere\seligible\sfor\sfarming\s([a-z0-9.]*)\sFound\s([0-9]*)\sproofs.\sTime:\s([0-9.]*)\ss.\sTotal\s([0-9]*)\splots"){
         $TotalChallenge++
-        $harvesterActivity = @{
+        $Activity = @{
             EligiblePlots = $Matches[1]
             FindTime = [double]$Matches[4]
             ProofsFound = $Matches[3]
             TotalPlots = $Matches[5]
             FilterRatio = $Matches[1] / $Matches[5]
         }
-        switch ($harvesterActivity.FindTime) {
+        switch ($Activity.FindTime) {
             {$_ -lt $FastestTime} {$FastestTime = $_}
             {$_ -gt $WorstTime} {$WorstTime = $_}
             {$_ -ge 1} {$Above1Seconds++}
             {$_ -ge 5} {$Above5Seconds++}
             {$_ -ge 30} {$Above30Seconds++}
         }
-        $proofs += $harvesterActivity.ProofsFound
-        $TotalFindTime += $harvesterActivity.FindTime
+        $proofs += $Activity.ProofsFound
+        $TotalFindTime += $Activity.FindTime
         $AverageSpeed = [math]::Round(($TotalFindTime / $TotalChallenge ),5)
-        $EligiblePlotsRatio += $harvesterActivity.FilterRatio
+        $EligiblePlotsRatio += $Activity.FilterRatio
         $PassedFilterPercent = [math]::Round(($EligiblePlotsRatio / $TotalChallenge ),5)  * 100
-        $summary = "Total challenge: $TotalChallenge  || RT - Best: $FastestTime, Worst: $WorstTime, Avg: $AverageSpeed || Above 1 Sec:$Above1Seconds, Above 5 Sec: $Above5Seconds, Above 30 Sec: $Above30Seconds || Percent Passed Filter: $PassedFilterPercent || Proofs Found: $proofs"
+        $summary = "Total Challenge: $TotalChallenge, RT - Best: $FastestTime, Worst: $WorstTime, Avg: $AverageSpeed, Above (1 Sec: $Above1Seconds, 5 Sec: $Above5Seconds, 30 Sec: $Above30Seconds), Percent Passing Filter: $PassedFilterPercent, Total Plots: " + $Activity.TotalPlots + ", Proofs: $proofs"
         $host.UI.RawUI.WindowTitle = $summary
         if($Later -lt (Get-Date)){
             SendMessageLine $summary $LINE_TOKEN;

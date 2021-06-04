@@ -73,7 +73,7 @@ Get-Content "~\.chia\mainnet\log\debug.log" -Wait -Tail 10 | select-string 'plot
         elseif ($_ -Match "Time:\s[5-9][0-9]*\.\d+") { 'red' } 
         elseif ($_ -Match "\d+\splots\swere\seligible") { 'white' } 
         elseif ($_ -Match ":\sError\s*(.*)") { 'red' ;SendMessageLine $Matches[1]  $LINE_TOKEN; } 
-        elseif ($_ -Match "warning") { 'yellow' } 
+        elseif ($_ -Match ":\sWarning\s*(.*)") { 'yellow' ;SendMessageLine $Matches[1]  $LINE_TOKEN; } 
         else {
             'DarkGray' 
         } 

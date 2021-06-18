@@ -4,17 +4,19 @@ $MESSAGE_WON = "RICHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
 $DELAY_SEND_SUMMARY = 300 # Second
 
 # No changes required.
-$FastestTime = 1000
-$WorstTime = 0
-$Above1Seconds = 0
-$Above5Seconds = 0
-$Above30Seconds = 0
-$TotalChallenge  = 0
-$EligiblePlotsRatio = 0
-$TotalFindTime = 0
-$proofs = 0
-$AverageSpeed
-$PassedFilterPercent
+$num_measurements = 0
+$avg_time_seconds = 0
+$over_1_seconds = 0
+$over_5_seconds = 0
+$over_30_seconds = 0
+$proofs_total = 0
+$eligible_plots_total = 0
+$eligible_events_total = 0
+$pct_Eligible_plots = 0
+$unfinished_block_total = 0
+$pct_unfinished_block = 0
+$summary = ""
+$line_message = ""
 
 $CurrentTime = Get-Date
 $Later = $CurrentTime.AddSeconds($DELAY_SEND_SUMMARY)
@@ -34,42 +36,61 @@ function SendMessageLine {
     }
 }
 
-Get-Content "~\.chia\mainnet\log\debug.log" -Wait -Tail 10 | select-string 'plots were eligible|error|warning|finished.signage.point|updated.wallet.peak|new_signage_point_harvester' | ForEach-Object {
+Get-Content "~\.chia\mainnet\log\debug.log" -Wait -Tail 10 | select-string 'plots were eligible|error|warning|finished.signage.point|updated.wallet.peak|new_signage_point_harvester|Added unfinished_block' | ForEach-Object {
     
-    if ($_ -Match "INFO\s*([0-9]*)\splots\swere\seligible\sfor\sfarming\s([a-z0-9.]*)\sFound\s([0-9]*)\sproofs.\sTime:\s([0-9.]*)\ss.\sTotal\s([0-9]*)\splots"){
-        $TotalChallenge++
-        $Activity = @{
-            EligiblePlots = $Matches[1]
-            FindTime = [double]$Matches[4]
-            ProofsFound = $Matches[3]
-            TotalPlots = $Matches[5]
-            FilterRatio = $Matches[1] / $Matches[5]
+    if ($_ -Match "([0-9:.]*) harvester (?:src|chia).harvester.harvester(?:\s?): INFO\s*([0-9]+) plots were eligible for farming ([0-9a-z.]*) Found ([0-9]) proofs. Time: ([0-9.]*) s. Total ([0-9]*) plots"){
+        $HarvesterActivityMessage = @{
+            timestamp=[datetime]$Matches[1]
+            eligible_plots_count=$Matches[2]
+            challenge_hash= $Matches[3]
+            found_proofs_count=$Matches[4]
+            search_time_seconds=[double]$Matches[5]
+            total_plots_count=$Matches[6]
         }
-        switch ($Activity.FindTime) {
-            {$_ -lt $FastestTime} {$FastestTime = $_}
-            {$_ -gt $WorstTime} {$WorstTime = $_}
-            {$_ -ge 1} {$Above1Seconds++}
-            {$_ -ge 5} {$Above5Seconds++}
-            {$_ -ge 30} {$Above30Seconds++}
+
+        $num_measurements++
+        $avg_time_seconds += ($HarvesterActivityMessage.search_time_seconds - $avg_time_seconds) / $num_measurements
+
+        switch ($HarvesterActivityMessage.search_time_seconds) {
+            {$_ -ge 1} {$over_1_seconds++}
+            {$_ -ge 5} {$over_5_seconds++}
+            {$_ -ge 30} {$over_30_seconds++}
         }
-        $proofs += $Activity.ProofsFound
-        $TotalFindTime += $Activity.FindTime
-        $AverageSpeed = [math]::Round(($TotalFindTime / $TotalChallenge ),5)
-        $EligiblePlotsRatio += $Activity.FilterRatio
-        $PassedFilterPercent = [math]::Round(($EligiblePlotsRatio / $TotalChallenge ),5)  * 100
-        $summary = "Total Challenge: $TotalChallenge, RT - Best: $FastestTime, Worst: $WorstTime, Avg: $AverageSpeed, Above (1 Sec: $Above1Seconds, 5 Sec: $Above5Seconds, 30 Sec: $Above30Seconds), Percent Passing Filter: $PassedFilterPercent, Total Plots: " + $Activity.TotalPlots + ", Proofs: $proofs"
-        $host.UI.RawUI.WindowTitle = $summary
-        if($Later -lt (Get-Date)){
-            SendMessageLine $summary $LINE_TOKEN;
-            $Later = Get-Date
-            $Later = $Later.AddSeconds($DELAY_SEND_SUMMARY)
+
+        if ($HarvesterActivityMessage.eligible_plots_count -ne 0){
+            $eligible_plots_total += $HarvesterActivityMessage.eligible_plots_count
+            $eligible_events_total++
         }
-    };
+        if ($eligible_events_total -ne 0){
+            $pct_Eligible_plots = [math]::Round(($eligible_plots_total/$eligible_events_total),2)
+        }
+        $proofs_total += $HarvesterActivityMessage.found_proofs_count
+        
+    } elseif ($_ -Match "Added unfinished_block")
+    {
+        $unfinished_block_total++
+    }
+
+    if ($eligible_plots_total -ne 0){
+        $pct_unfinished_block = [math]::Round(($unfinished_block_total/$eligible_plots_total),2)
+    }
+
+    $summary = "Search - average: "+[math]::Round($avg_time_seconds, 2)+"s, - over 1s: $over_1_seconds, - over 5s: $over_5_seconds, - over 30s: $over_30_seconds, Plots: " + $HarvesterActivityMessage.total_plots_count + ",  Eligible plots: $pct_Eligible_plots average, Not farmed: $pct_unfinished_block average, Proofs: $proofs_total"
+    $line_message = "Proofs: $proofs_total found`nSearch`n- average: "+[math]::Round($avg_time_seconds, 2)+"s`n- over 1s: $over_1_seconds`n- over 5s: $over_5_seconds`n- over 30s: $over_30_seconds`nPlots: " + $HarvesterActivityMessage.total_plots_count + "`nEligible plots: $pct_Eligible_plots average`nNot farmed: $pct_unfinished_block average"
+
+    $host.UI.RawUI.WindowTitle = $summary
+
+    if ($Later -lt (Get-Date)){
+        SendMessageLine $line_message $LINE_TOKEN;
+        $Later = Get-Date
+        $Later = $Later.AddSeconds($DELAY_SEND_SUMMARY)
+    }
 
     write-host -f $(
         if ($_ -Match "([1-9][0-9]*)\sproofs") {'green' ;SendMessageLine $MESSAGE_WON  $LINE_TOKEN; } 
         elseif ($_ -Match "new_signage_point_harvester") { 'darkcyan' }
         elseif ($_ -Match "([1-9][0-9]*)\splots\swere\seligible") { 'cyan' } 
+        elseif ($_ -Match "Added unfinished_block") { 'magenta' } 
         elseif ($_ -Match "Time:\s[5-9][0-9]*\.\d+") { 'red' } 
         elseif ($_ -Match "\d+\splots\swere\seligible") { 'white' } 
         elseif ($_ -Match ":\sError\s*(.*)") { 'red' ;SendMessageLine $Matches[1]  $LINE_TOKEN; } 

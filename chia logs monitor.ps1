@@ -9,12 +9,17 @@ $avg_time_seconds = 0
 $over_1_seconds = 0
 $over_5_seconds = 0
 $over_30_seconds = 0
+
+$challenge_events_total = 0
+$challenge_plots_total = 0
 $proofs_total = 0
+$plots_total =  0;
 $eligible_plots_total = 0
 $eligible_events_total = 0
-$pct_Eligible_plots = 0
 $unfinished_block_total = 0
+$pct_Eligible_plots = 0
 $pct_unfinished_block = 0
+$pct_not_Eligible_plots = 0
 $summary = ""
 $line_message = ""
 
@@ -38,7 +43,7 @@ function SendMessageLine {
 
 Get-Content "~\.chia\mainnet\log\debug.log" -Wait -Tail 10 | select-string 'plots were eligible|error|warning|finished.signage.point|updated.wallet.peak|new_signage_point_harvester|Added unfinished_block' | ForEach-Object {
     
-    if ($_ -Match "([0-9:.]*) harvester (?:src|chia).harvester.harvester(?:\s?): INFO\s*([0-9]+) plots were eligible for farming ([0-9a-z.]*) Found ([0-9]) proofs. Time: ([0-9.]*) s. Total ([0-9]*) plots"){
+    if ($_ -Match "([0-9:.]*) harvester (?:src|chia).harvester.harvester(?:\s?): INFO\s*([0-9]+) plots were eligible for farming ([0-9a-z.]*) Found ([0-9]) proofs. Time: ([0-9.]*) s. Total ([0-9]*) plots") {
         $HarvesterActivityMessage = @{
             timestamp=[datetime]$Matches[1]
             eligible_plots_count=$Matches[2]
@@ -50,7 +55,6 @@ Get-Content "~\.chia\mainnet\log\debug.log" -Wait -Tail 10 | select-string 'plot
 
         $num_measurements++
         $avg_time_seconds += ($HarvesterActivityMessage.search_time_seconds - $avg_time_seconds) / $num_measurements
-
         switch ($HarvesterActivityMessage.search_time_seconds) {
             {$_ -ge 1} {$over_1_seconds++}
             {$_ -ge 5} {$over_5_seconds++}
@@ -61,22 +65,32 @@ Get-Content "~\.chia\mainnet\log\debug.log" -Wait -Tail 10 | select-string 'plot
             $eligible_plots_total += $HarvesterActivityMessage.eligible_plots_count
             $eligible_events_total++
         }
-        if ($eligible_events_total -ne 0){
-            $pct_Eligible_plots = [math]::Round(($eligible_plots_total/$eligible_events_total),2)
-        }
+
+        $plots_total = $HarvesterActivityMessage.total_plots_count
+        $challenge_events_total++
+        $challenge_plots_total += $HarvesterActivityMessage.total_plots_count
         $proofs_total += $HarvesterActivityMessage.found_proofs_count
         
-    } elseif ($_ -Match "Added unfinished_block")
-    {
+    } elseif ($_ -Match "Added unfinished_block") {
         $unfinished_block_total++
     }
 
-    if ($eligible_plots_total -ne 0){
-        $pct_unfinished_block = [math]::Round(($unfinished_block_total/$eligible_plots_total),2)
+    #if ($eligible_events_total -ne 0){
+    #    $pct_Eligible_plots = [math]::Round(($eligible_plots_total/$eligible_events_total),2)
+    #}
+#
+    #if ($eligible_plots_total -ne 0){
+    #    $pct_unfinished_block = [math]::Round(($unfinished_block_total/$eligible_plots_total),2)
+    #}
+    
+    if ($challenge_plots_total -ne 0){
+        $pct_not_Eligible_plots = [math]::Round(((($challenge_plots_total-$unfinished_block_total)-$eligible_plots_total)/$challenge_plots_total),5) * 100
+        $pct_unfinished_block = [math]::Round(($unfinished_block_total/$challenge_plots_total),5) * 100
+        $pct_Eligible_plots = [math]::Round(((100-$pct_unfinished_block)-$pct_not_Eligible_plots),5)
     }
 
-    $summary = "Search - average: "+[math]::Round($avg_time_seconds, 2)+"s, - over 1s: $over_1_seconds, - over 5s: $over_5_seconds, - over 30s: $over_30_seconds, Plots: " + $HarvesterActivityMessage.total_plots_count + ",  Eligible plots: $pct_Eligible_plots average, Not farmed: $pct_unfinished_block average, Proofs: $proofs_total"
-    $line_message = "Proofs: $proofs_total found`nSearch`n- average: "+[math]::Round($avg_time_seconds, 2)+"s`n- over 1s: $over_1_seconds`n- over 5s: $over_5_seconds`n- over 30s: $over_30_seconds`nPlots: " + $HarvesterActivityMessage.total_plots_count + "`nEligible plots: $pct_Eligible_plots average`nNot farmed: $pct_unfinished_block average"
+    $summary = "Proofs: $proofs_total , Total $plots_total Plots | Search - average: "+[math]::Round($avg_time_seconds, 2)+"s, - over 1s: $over_1_seconds, - over 5s: $over_5_seconds, - over 30s: $over_30_seconds | Opportunity - Not Eligible plots: $pct_not_Eligible_plots%,  Eligible plots: $pct_Eligible_plots%, Not farmed: $pct_unfinished_block%"
+    $line_message = "`nProofs: $proofs_total found`nLookup time`n- average: "+[math]::Round($avg_time_seconds, 2)+"s`n- over 1s: $over_1_seconds`n- over 5s: $over_5_seconds`n- over 30s: $over_30_seconds`nPlots: $plots_total opportunity`n- Not Eligible: $pct_not_Eligible_plots%25`n- Eligible plots: $pct_Eligible_plots%25`n- Not farmed: $pct_unfinished_block%25"
 
     $host.UI.RawUI.WindowTitle = $summary
 

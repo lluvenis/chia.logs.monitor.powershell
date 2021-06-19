@@ -74,14 +74,6 @@ Get-Content "~\.chia\mainnet\log\debug.log" -Wait -Tail 10 | select-string 'plot
     } elseif ($_ -Match "Added unfinished_block") {
         $unfinished_block_total++
     }
-
-    #if ($eligible_events_total -ne 0){
-    #    $pct_Eligible_plots = [math]::Round(($eligible_plots_total/$eligible_events_total),2)
-    #}
-#
-    #if ($eligible_plots_total -ne 0){
-    #    $pct_unfinished_block = [math]::Round(($unfinished_block_total/$eligible_plots_total),2)
-    #}
     
     if ($challenge_plots_total -ne 0){
         $pct_not_Eligible_plots = [math]::Round(((($challenge_plots_total-$unfinished_block_total)-$eligible_plots_total)/$challenge_plots_total),5) * 100
